@@ -37,8 +37,7 @@ class MarkdownProcessor:
                     "use_pygments": False,
                 },
                 "markdown.extensions.toc": {
-                    "permalink": True,
-                    "permalink_class": "toc-link",
+                    "permalink": False,
                 },
             },
         )
@@ -93,7 +92,7 @@ class MarkdownProcessor:
         return html
 
     def _convert_headers(self, html: str) -> str:
-        """Convert headers to Telegraph-supported levels.
+        """Convert headers to Telegraph-supported levels (h3, h4).
 
         Args:
         ----
@@ -104,10 +103,25 @@ class MarkdownProcessor:
             HTML with converted headers
 
         """
-        html = re.sub(r"<h[12]>", "<h3>", html)
-        html = re.sub(r"</h[12]>", "</h3>", html)
-        html = re.sub(r"<h[56]>", "<h4>", html)
-        html = re.sub(r"</h[56]>", "</h4>", html)
+        # Use placeholders to avoid chain reactions
+        html = re.sub(r"<h1[^>]*>", "---H1_START---", html)
+        html = re.sub(r"</h1>", "---H1_END---", html)
+        html = re.sub(r"<h2[^>]*>", "---H2_START---", html)
+        html = re.sub(r"</h2>", "---H2_END---", html)
+
+        # h3, h4 -> strong
+        html = re.sub(r"<h[34][^>]*>", "<p><strong>", html)
+        html = re.sub(r"</h[34]>", "</strong></p>", html)
+        # h5, h6 -> em
+        html = re.sub(r"<h[56][^>]*>", "<p><em>", html)
+        html = re.sub(r"</h[56]>", "</em></p>", html)
+
+        # Replace placeholders with final tags
+        html = html.replace("---H1_START---", "<h3>")
+        html = html.replace("---H1_END---", "</h3>")
+        html = html.replace("---H2_START---", "<h4>")
+        html = html.replace("---H2_END---", "</h4>")
+
         return html
 
     def _optimize_code_blocks(self, html: str) -> str:
