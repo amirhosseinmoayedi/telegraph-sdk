@@ -737,7 +737,7 @@ wheels = [
 [[package]]
 name = "telegraph-sdk"
 version = "1.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "beautifulsoup4" },

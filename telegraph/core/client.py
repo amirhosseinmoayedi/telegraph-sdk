@@ -6,17 +6,9 @@ from typing import Any, Optional
 
 import aiohttp
 
-from telegraph.analytics import Analytics
 from telegraph.content import ContentValidator, MarkdownProcessor
-from telegraph.core import (
-    PageContent,
-    TelegraphAccount,
-    TelegraphAPIError,
-    TelegraphError,
-    TelegraphPage,
-    ValidationError,
-    ViewStats,
-)
+from telegraph.core.models import PageContent, TelegraphAccount, TelegraphPage, ViewStats
+from telegraph.core.exceptions import TelegraphAPIError, TelegraphError, ValidationError
 from telegraph.upload import FileUploader
 
 HTTP_OK = 200
@@ -50,6 +42,7 @@ class TelegraphClient:
         self._markdown_processor = MarkdownProcessor()
         self._content_validator = ContentValidator()
         self._file_uploader = FileUploader(domain=domain, timeout=timeout)
+        from telegraph.analytics import Analytics
         self._analytics = Analytics(self)
 
     @property
@@ -97,7 +90,7 @@ class TelegraphClient:
         return self._file_uploader
 
     @property
-    def analytics(self) -> Analytics:
+    def analytics(self) -> 'Analytics':
         """Get analytics interface.
 
         Returns
@@ -140,6 +133,10 @@ class TelegraphClient:
         if self._access_token and "access_token" not in data:
             data["access_token"] = self._access_token
 
+        # Convert all boolean values in data to 'true'/'false' strings
+        for k, v in data.items():
+            if isinstance(v, bool):
+                data[k] = str(v).lower()
         for attempt in range(self._max_retries + 1):
             try:
                 async with aiohttp.ClientSession(timeout=self._timeout) as session:

@@ -2,10 +2,10 @@
 
 from typing import TYPE_CHECKING, Any, Optional
 
-from core.models import ViewStats
+from telegraph.core.models import ViewStats
 
 if TYPE_CHECKING:
-    from core.client import TelegraphClient
+    from telegraph.core.client import TelegraphClient
 
 
 class Analytics:

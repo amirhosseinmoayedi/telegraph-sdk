@@ -4,8 +4,8 @@ import asyncio
 from pathlib import Path
 from typing import Callable, Optional, Union
 
-from core.models import UploadResult
-from file_handler import FileUploader
+from telegraph.core.models import UploadResult
+from telegraph.upload.file_handler import FileUploader
 
 
 class BatchUploader:

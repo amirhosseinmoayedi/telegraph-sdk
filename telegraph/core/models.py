@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, ClassVar
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,7 @@ class PageContent:
     author_name: Optional[str] = None
     author_url: Optional[str] = None
     content_type: str = "html"
+    MAX_TITLE_LENGTH: ClassVar[int] = 256
 
     def __post_init__(self) -> None:
         """Validate page content after initialization."""
@@ -117,7 +118,7 @@ class ViewStats:
     """Page view statistics."""
 
     views: int
-    period: str
+    period: Optional[str] = None
     year: Optional[int] = None
     month: Optional[int] = None
     day: Optional[int] = None

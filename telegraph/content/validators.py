@@ -3,7 +3,7 @@
 from typing import Any, ClassVar
 from urllib.parse import urlparse
 
-from content.html import HTMLProcessor
+from telegraph.content.html import HTMLProcessor
 
 
 class ContentValidator:

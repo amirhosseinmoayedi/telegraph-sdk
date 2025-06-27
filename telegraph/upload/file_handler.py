@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Callable, ClassVar, Optional, Union
 
 import aiohttp
-from core.models import UploadResult
+from telegraph.core.models import UploadResult
 
 HTTP_OK = 200
 
