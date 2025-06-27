@@ -1,0 +1,65 @@
+[project]
+name = "telegraph-sdk"
+version = "1.0.0"
+description = "A comprehensive async Python package for the Telegraph API."
+authors = [{ name = "Amirhossein", email = "amir.h.moayedi@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "aiohttp",
+    "beautifulsoup4",
+    "markdown",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "pre-commit",
+]
+
+[tool.ruff]
+line-length = 99
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "D",    # pydocstyle (docstring conventions)
+    "C90",  # mccabe complexity
+    "B",    # bugbear
+    "C4",   # comprehensions
+    "S",    # bandit (security)
+    "PL",   # pylint
+    "UP",   # pyupgrade
+    "RUF",  # Ruff-specific rules
+]
+ignore = [
+    "D100", # Missing docstring in public module
+    "D104", # Missing docstring in public package
+    "C901", # Too Complex
+    "PLR0912", # Too many branches
+]
+exclude = [
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint.isort]
+known-first-party = ["telegraph"]
