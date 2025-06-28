@@ -88,6 +88,8 @@ class MarkdownProcessor:
         html = self._convert_headers(html)
         html = self._optimize_code_blocks(html)
         html = self._handle_images(html)
+        html = self._convert_strong_and_em(html)
+        html = self._autolink_urls(html)
         html = self._clean_unsupported_tags(html)
         return html
 
@@ -103,24 +105,15 @@ class MarkdownProcessor:
             HTML with converted headers
 
         """
-        # Use placeholders to avoid chain reactions
-        html = re.sub(r"<h1[^>]*>", "---H1_START---", html)
-        html = re.sub(r"</h1>", "---H1_END---", html)
-        html = re.sub(r"<h2[^>]*>", "---H2_START---", html)
-        html = re.sub(r"</h2>", "---H2_END---", html)
+        # h1 -> h3, h2 -> h4
+        html = re.sub(r"<h1[^>]*>", "<h3>", html)
+        html = re.sub(r"</h1>", "</h3>", html)
+        html = re.sub(r"<h2[^>]*>", "<h4>", html)
+        html = re.sub(r"</h2>", "</h4>", html)
 
-        # h3, h4 -> strong
-        html = re.sub(r"<h[34][^>]*>", "<p><strong>", html)
-        html = re.sub(r"</h[34]>", "</strong></p>", html)
-        # h5, h6 -> em
-        html = re.sub(r"<h[56][^>]*>", "<p><em>", html)
-        html = re.sub(r"</h[56]>", "</em></p>", html)
-
-        # Replace placeholders with final tags
-        html = html.replace("---H1_START---", "<h3>")
-        html = html.replace("---H1_END---", "</h3>")
-        html = html.replace("---H2_START---", "<h4>")
-        html = html.replace("---H2_END---", "</h4>")
+        # h3, h4, h5, h6 -> strong
+        html = re.sub(r"<h[3-6][^>]*>", "<p><strong>", html)
+        html = re.sub(r"</h[3-6]>", "</strong></p>", html)
 
         return html
 
@@ -136,7 +129,7 @@ class MarkdownProcessor:
             HTML with optimized code blocks
 
         """
-        return html.replace('<div class="highlight">', "").replace("</div>", "")
+        return html.replace('<div class="highlight">', "<pre>").replace("</div>", "</pre>")
 
     def _handle_images(self, html: str) -> str:
         """Process images for Telegraph compatibility.
@@ -150,20 +143,76 @@ class MarkdownProcessor:
             HTML with processed images
 
         """
+        soup = BeautifulSoup(html, "html.parser")
+        for img in soup.find_all('img'):
+            parent = img.parent
+            # Check if image is wrapped in a <p> tag and is the only element
+            is_lonely_image = (
+                parent.name == 'p' and
+                all(c == img or (isinstance(c, str) and c.strip() == '') for c in parent.contents)
+            )
+            if is_lonely_image:
+                figure = soup.new_tag('figure')
+                # Create a new img tag without the 'alt' attribute
+                img_clone = soup.new_tag('img', src=img.get('src', ''))
+                figure.append(img_clone)
+                # Create a figcaption using the alt text
+                figcaption = soup.new_tag('figcaption')
+                caption_text = img.get('title', img.get('alt', ''))
+                figcaption.string = caption_text
+                figure.append(figcaption)
+                # Replace the original <p> tag with the new <figure>
+                parent.replace_with(figure)
+        # Return only the body content to avoid extra html/body tags
+        if soup.body:
+            return soup.body.decode_contents()
+        return str(soup)
 
-        def process_img(match):
-            img_tag = match.group(0)
-            soup = BeautifulSoup(img_tag, "html.parser")
-            img = soup.find("img")
-            if img:
-                return (
-                    f"<figure><img src='{img.get('src', '')}' "
-                    f"alt='{img.get('alt', '')}'><figcaption>"
-                    f"{img.get('title', '')}</figcaption></figure>"
-                )
-            return img_tag
+    def _autolink_urls(self, html: str) -> str:
+        """Finds URLs in plain text and converts them to HTML links."""
+        soup = BeautifulSoup(html, 'html.parser')
+        text_nodes = soup.find_all(string=True)
+        url_pattern = re.compile(r'(https?://[\S]+)')
 
-        return re.sub(r"<img[^>]+>", process_img, html)
+        for node in text_nodes:
+            # Avoid linking inside existing links, preformatted text, or code
+            if node.parent.name in ['a', 'pre', 'code']:
+                continue
+
+            text = str(node)
+            # Simple check to avoid processing text without URLs
+            if 'http' not in text:
+                continue
+
+            # Replace URLs with anchor tags
+            new_text = url_pattern.sub(r'<a href="\1">\1</a>', text)
+
+            # If changes were made, replace the node with the new parsed HTML
+            if new_text != text:
+                node.replace_with(BeautifulSoup(new_text, 'html.parser'))
+
+        # Return only the body content to avoid extra html/body tags
+        if soup.body:
+            return soup.body.decode_contents()
+        return str(soup)
+
+    def _convert_strong_and_em(self, html: str) -> str:
+        """Convert strong and em tags to Telegraph-supported HTML.
+
+        Args:
+        ----
+            html: HTML content
+
+        Returns:
+        -------
+            HTML with converted strong and em tags
+
+        """
+        html = re.sub(r"<strong>", "<b>", html)
+        html = re.sub(r"</strong>", "</b>", html)
+        html = re.sub(r"<em>", "<i>", html)
+        html = re.sub(r"</em>", "</i>", html)
+        return html
 
     def _clean_unsupported_tags(self, html: str) -> str:
         """Remove unsupported HTML tags while preserving content.
@@ -181,7 +230,7 @@ class MarkdownProcessor:
         def clean_tag(match):
             return match.group(1)
 
-        unsupported_tags = ["div", "span", "table", "tbody", "thead", "tr", "td", "th"]
+        unsupported_tags = ["div", "span", "table", "tbody", "thead", "tr", "td", "th", "video"]
         for tag in unsupported_tags:
             html = re.sub(rf"<{tag}[^>]*>(.*?)</{tag}>", clean_tag, html, flags=re.DOTALL)
 
